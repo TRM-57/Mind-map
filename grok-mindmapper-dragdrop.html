@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grok MindMapper • Drag & Drop</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://unpkg.com/jsmind@0.8.5/style/jsmind.css">
+    <script src="https://unpkg.com/jsmind@0.8.5/js/jsmind.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body { font-family: 'Inter', system_ui, sans-serif; }
+        .mindmap-container {
+            background: #0f172a;
+            border-radius: 16px;
+            box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.4);
+            height: 620px;
+            border: 1px solid #334155;
+        }
+        .jsmind-inner {
+            background: #0f172a !important;
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-200">
+    <!-- Header -->
+    <header class="border-b border-slate-800 bg-slate-900/70 backdrop-blur-xl sticky top-0 z-50">
+        <div class="max-w-screen-2xl mx-auto px-8 py-5 flex items-center justify-between">
+            <div class="flex items-center gap-x-3">
+                <div class="w-10 h-10 bg-gradient-to-br from-indigo-500 to-violet-500 rounded-2xl flex items-center justify-center">
+                    <i class="fa-solid fa-brain text-white text-2xl"></i>
+                </div>
+                <div>
+                    <h1 class="font-semibold text-2xl tracking-tight">Grok MindMapper</h1>
+                    <p class="text-xs text-slate-500 -mt-1">Drag & Drop Edition</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-x-3">
+                <button onclick="saveMindMap()" 
+                        class="flex items-center gap-x-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-2xl text-sm font-medium transition-colors">
+                    <i class="fa-solid fa-save"></i>
+                    <span>Save</span>
+                </button>
+                
+                <button onclick="exportAsPNG()" 
+                        class="flex items-center gap-x-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-2xl text-sm font-medium transition-colors">
+                    <i class="fa-solid fa-download"></i>
+                    <span>Export PNG</span>
+                </button>
+
+                <button onclick="clearMindMap()" 
+                        class="flex items-center gap-x-2 px-4 py-2 hover:bg-red-900/30 text-red-400 border border-red-900/50 rounded-2xl text-sm font-medium transition-colors">
+                    <i class="fa-solid fa-trash"></i>
+                    <span>Clear</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="max-w-screen-2xl mx-auto px-8 pt-8 pb-12">
+        <div class="flex gap-6">
+            
+            <!-- Sidebar Controls -->
+            <div class="w-72 flex-shrink-0">
+                <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 sticky top-24">
+                    <h3 class="font-semibold text-lg mb-4 flex items-center gap-x-2">
+                        <i class="fa-solid fa-tools text-indigo-400"></i>
+                        <span>Controls</span>
+                    </h3>
+
+                    <div class="space-y-3">
+                        <button onclick="addChildNode()" 
+                                class="w-full flex items-center justify-center gap-x-2 bg-indigo-600 hover:bg-indigo-500 transition-colors py-3 rounded-2xl font-semibold">
+                            <i class="fa-solid fa-plus"></i>
+                            <span>Add Child Node</span>
+                        </button>
+
+                        <button onclick="addSiblingNode()" 
+                                class="w-full flex items-center justify-center gap-x-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 transition-colors py-3 rounded-2xl font-semibold">
+                            <i class="fa-solid fa-plus"></i>
+                            <span>Add Sibling Node</span>
+                        </button>
+
+                        <button onclick="editSelectedNode()" 
+                                class="w-full flex items-center justify-center gap-x-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 transition-colors py-3 rounded-2xl font-semibold">
+                            <i class="fa-solid fa-edit"></i>
+                            <span>Edit Selected Node</span>
+                        </button>
+
+                        <button onclick="deleteSelectedNode()" 
+                                class="w-full flex items-center justify-center gap-x-2 bg-red-600/90 hover:bg-red-600 transition-colors py-3 rounded-2xl font-semibold">
+                            <i class="fa-solid fa-trash"></i>
+                            <span>Delete Selected Node</span>
+                        </button>
+                    </div>
+
+                    <div class="mt-8 pt-6 border-t border-slate-700">
+                        <h4 class="text-sm font-semibold text-slate-400 mb-3">Tips</h4>
+                        <ul class="text-xs text-slate-400 space-y-2">
+                            <li>• Double-click a node to edit</li>
+                            <li>• Drag nodes to reposition</li>
+                            <li>• Click a node to select it</li>
+                            <li>• Use "Add Child" for sub-ideas</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mind Map Container -->
+            <div class="flex-1">
+                <div class="bg-slate-900 border border-slate-800 rounded-3xl p-2">
+                    <div id="jsmind_container" class="mindmap-container w-full"></div>
+                </div>
+                
+                <div class="mt-4 text-center text-xs text-slate-500">
+                    Drag nodes freely • Double-click to edit • Right-click for more options
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let jm = null;
+
+        function initMindMap() {
+            const options = {
+                container: 'jsmind_container',
+                theme: 'dark',
+                editable: true,
+                mode: 'full',
+                view: {
+                    draggable: true,
+                    hide_scrollbars_when_draggable: true
+                }
+            };
+
+            const mind = {
+                meta: {
+                    name: "Grok Mind Map",
+                    author: "Grok",
+                    version: "1.0"
+                },
+                format: "node_tree",
+                data: {
+                    id: "root",
+                    topic: "My Mind Map",
+                    children: [
+                        {
+                            id: "sub1",
+                            topic: "Main Idea 1",
+                            children: [
+                                { id: "sub1-1", topic: "Sub idea" },
+                                { id: "sub1-2", topic: "Another point" }
+                            ]
+                        },
+                        {
+                            id: "sub2",
+                            topic: "Main Idea 2"
+                        }
+                    ]
+                }
+            };
+
+            jm = new jsMind(options);
+            jm.show(mind);
+
+            // Add double-click to edit
+            const container = document.getElementById('jsmind_container');
+            container.addEventListener('dblclick', function(e) {
+                const node = jm.get_selected_node();
+                if (node) {
+                    editSelectedNode();
+                }
+            });
+        }
+
+        function addChildNode() {
+            if (!jm) return;
+            const selected = jm.get_selected_node();
+            if (!selected) {
+                alert("Please select a node first");
+                return;
+            }
+            const topic = prompt("Enter topic for new child node:", "New Idea");
+            if (topic) {
+                jm.add_node(selected.id, jsMind.util.uuid.newid(), topic);
+            }
+        }
+
+        function addSiblingNode() {
+            if (!jm) return;
+            const selected = jm.get_selected_node();
+            if (!selected || selected.id === 'root') {
+                alert("Cannot add sibling to root node");
+                return;
+            }
+            const topic = prompt("Enter topic for new sibling node:", "New Idea");
+            if (topic && selected.parent) {
+                jm.add_node(selected.parent.id, jsMind.util.uuid.newid(), topic);
+            }
+        }
+
+        function editSelectedNode() {
+            if (!jm) return;
+            const node = jm.get_selected_node();
+            if (!node) {
+                alert("Please select a node to edit");
+                return;
+            }
+            const newTopic = prompt("Edit node text:", node.topic);
+            if (newTopic !== null) {
+                jm.update_node(node.id, newTopic);
+            }
+        }
+
+        function deleteSelectedNode() {
+            if (!jm) return;
+            const node = jm.get_selected_node();
+            if (!node) {
+                alert("Please select a node to delete");
+                return;
+            }
+            if (confirm("Delete this node and all its children?")) {
+                jm.remove_node(node.id);
+            }
+        }
+
+        function saveMindMap() {
+            if (!jm) return;
+            const data = jm.get_data();
+            localStorage.setItem('grok_mindmap_data', JSON.stringify(data));
+            alert("Mind map saved successfully!");
+        }
+
+        function loadMindMap() {
+            const savedData = localStorage.getItem('grok_mindmap_data');
+            if (savedData && jm) {
+                try {
+                    const data = JSON.parse(savedData);
+                    jm.show(data);
+                } catch(e) {
+                    console.error("Failed to load saved mind map");
+                }
+            }
+        }
+
+        function clearMindMap() {
+            if (!jm) return;
+            if (confirm("Clear the entire mind map?")) {
+                const mind = {
+                    meta: { name: "New Mind Map" },
+                    format: "node_tree",
+                    data: { id: "root", topic: "New Mind Map", children: [] }
+                };
+                jm.show(mind);
+            }
+        }
+
+        async function exportAsPNG() {
+            if (!jm) return;
+            const container = document.getElementById('jsmind_container');
+            
+            // Simple export using html2canvas if available, otherwise alert
+            try {
+                const canvas = await html2canvas(container);
+                const link = document.createElement('a');
+                link.download = 'mindmap.png';
+                link.href = canvas.toDataURL();
+                link.click();
+            } catch (e) {
+                alert("PNG export requires html2canvas. You can screenshot the mind map instead.");
+            }
+        }
+
+        // Initialize everything
+        function initializeApp() {
+            initMindMap();
+            
+            // Load saved mind map if exists
+            setTimeout(() => {
+                loadMindMap();
+            }, 500);
+
+            // Keyboard shortcuts
+            document.addEventListener('keydown', function(e) {
+                if (e.key === "Delete" || e.key === "Backspace") {
+                    const node = jm.get_selected_node();
+                    if (node && node.id !== 'root') {
+                        if (confirm("Delete selected node?")) {
+                            jm.remove_node(node.id);
+                        }
+                    }
+                }
+                
+                if (e.key.toLowerCase() === "?" && document.activeElement.tagName === "BODY") {
+                    e.preventDefault();
+                    alert("Shortcuts:\n• Double-click node = Edit\n• Delete key = Remove selected node\n• Drag nodes to move them");
+                }
+            });
+
+            console.log("%c[Grok MindMapper v2] Drag & Drop version initialized", "color:#64748b");
+        }
+
+        window.onload = initializeApp;
+    </script>
+</body>
+</html>
